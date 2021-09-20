@@ -623,8 +623,9 @@ TEST(LiteInterpreterTest, isCompatibleSuccess) {
   std::unordered_map<std::string, OperatorInfo> model_ops;
   model_ops["aten::add.Scalar"] = OperatorInfo{2};
 
+  std::unordered_set<std::string> types = {"List", "int"};
   auto model_info = ModelCompatibilityInfo{
-      caffe2::serialize::kMaxSupportedBytecodeVersion, model_ops};
+      caffe2::serialize::kMaxSupportedBytecodeVersion, model_ops, types};
 
   AT_ASSERT(
       is_compatible(runtime_info, model_info).status ==
@@ -640,7 +641,9 @@ TEST(LiteInterpreterTest, isCompatibleFail) {
   std::unordered_map<std::string, OperatorInfo> runtime_ops;
   runtime_ops["aten::add.Int"] = OperatorInfo{2};
   auto runtime_info = RuntimeCompatibilityInfo{
-      caffe2::serialize::kMaxSupportedBytecodeVersion, runtime_ops};
+      caffe2::serialize::kMaxSupportedBytecodeVersion,
+      runtime_ops,
+      _get_supported_types()};
 
   auto result = is_compatible(runtime_info, model_info);
   AT_ASSERT(result.status = ModelCompatibilityStatus::ERROR);
@@ -651,12 +654,25 @@ TEST(LiteInterpreterTest, isCompatibleFail) {
   // test trivial failure due to bytecode
   runtime_ops["aten::add.Scalar"] = OperatorInfo{2};
   runtime_info = RuntimeCompatibilityInfo{
-      caffe2::serialize::kMaxSupportedBytecodeVersion, runtime_ops};
+      caffe2::serialize::kMaxSupportedBytecodeVersion,
+      runtime_ops,
+      _get_supported_types()};
   model_info.bytecode_version =
       caffe2::serialize::kMaxSupportedBytecodeVersion + 1;
 
   result = is_compatible(runtime_info, model_info);
   AT_ASSERT(result.status = ModelCompatibilityStatus::ERROR);
+
+  // test trivial failure due to type
+  runtime_info = RuntimeCompatibilityInfo::get();
+  std::unordered_set<std::string> types = {"List", "int", "NamedTuple"};
+
+  model_info = ModelCompatibilityInfo{
+      caffe2::serialize::kMaxSupportedBytecodeVersion, model_ops, types};
+
+  AT_ASSERT(
+      is_compatible(runtime_info, model_info).status ==
+      ModelCompatibilityStatus::ERROR);
 }
 
 TEST(LiteInterpreterTest, Eval) {

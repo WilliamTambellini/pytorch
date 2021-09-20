@@ -3,6 +3,11 @@
 #include <torch/csrc/jit/mobile/runtime_compatibility.h>
 #include <torch/csrc/jit/runtime/operator.h>
 
+namespace c10 {
+TypePtr parseType(const std::string& pythonStr);
+std::unordered_set<std::string> getSupportedType();
+} // namespace c10
+
 namespace torch {
 namespace jit {
 
@@ -49,7 +54,13 @@ std::unordered_map<std::string, OperatorInfo> _get_runtime_ops_and_info() {
 
 RuntimeCompatibilityInfo RuntimeCompatibilityInfo::get() {
   return RuntimeCompatibilityInfo{
-      _get_runtime_bytecode_version(), _get_runtime_ops_and_info()};
+      _get_runtime_bytecode_version(),
+      _get_runtime_ops_and_info(),
+      _get_supported_types()};
+}
+
+std::unordered_set<std::string> _get_supported_types() {
+  return at::getSupportedType();
 }
 
 } // namespace jit
